@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(express.json());
-const port = 6000;
+const port = 3500;
 
 
 //connect mongoose
@@ -29,9 +29,70 @@ const bookSchema = new mongoose.Schema({
 
 const book = mongoose.model('book', bookSchema);
 
-// app.get('/', async (req, res) => {
 
-// })
+//CRUD operation
+app.get('/', async (req, res) => {
+    try{
+        const books = await book.find().populate('brrowedBy', 'name email')
+        res.status(200).json(books);
+    } catch {
+        res.status(500).json({ message: "Internal Server Error"})
+    }
+});
+
+app.post('/', async (req, res) => {
+    try{
+        const {title, author, genre, publishedYear, availableCopies} = req.body;
+
+        if(!title || !author || !genre || !publishedYear || !availableCopies) {
+            return res.status(400).json({ message: "Bad Request"})
+        }
+
+        const newbook = new book({
+            title, author, genre, publishedYear, availableCopies
+        })
+        await newbook.save();
+        res.status(200).json(newbook);
+    } catch {
+        res.status(500).json({ message: "Internal Server Error"})
+    }
+});
+
+
+app.put('/:id', async(req, res) => {
+    try{
+        const {title, author, genre, publishedYear, availableCopies} = req.body;
+
+        const updatebook = await book.findByIdAndUpdate(
+            req.params.id,
+            {title, author, genre, publishedYear, availableCopies},
+            {new : true, runValidators : true}
+        )
+
+        if(!updatebook){
+            res.status(404).json({message : "Not Found"})
+        }
+
+        res.status(200).json(updatebook)
+    }catch {
+        res.status(500).json({ message: "Internal Server Error"})
+    }
+});
+
+
+app.delete('/:id', async(req, res) => {
+    try{
+        const deleteBook = await book.findByIdAndDelete(req.params.id);
+
+        if(!deleteBook) {
+            res.status(404).json({message : "Not found"})
+        }
+
+        res.status(200).json({message : "Book removed successfully"})
+    } catch {
+        res.status(500).json({ message: "Internal Server Error"})
+    }
+})
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`)
